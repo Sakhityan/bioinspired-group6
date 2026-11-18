@@ -17,50 +17,63 @@ import capyle.utils as utils
 import numpy as np
 
 
-def transition_func(grid, neighbourstates, neighbourcounts):
-    # dead = state == 0, live = state == 1, sick = state == 2
-    # unpack state counts for state 0 and state 1
-    dead_neighbours, healthy_neighbours, sick_neighbours = neighbourcounts
-    # create boolean arrays for the birth & survival rules
-    # if 3 live neighbours and is dead -> cell born
-    birth = ((healthy_neighbours == 3) | (sick_neighbours == 3)) & (grid == 0)
-    # if 2 or 3 live neighbours and is alive -> survives
-    survive = ((healthy_neighbours == 2) | (healthy_neighbours == 3)) & (grid == 1)
-    become_sick = (sick_neighbours > 2) & (grid == 1)
-    remain_sick = (sick_neighbours > 0) & (sick_neighbours <=4) & (grid == 2)
-    death_isolation = (((healthy_neighbours + sick_neighbours) == 1) | ((healthy_neighbours + sick_neighbours) == 0))
-    death_sickness = (sick_neighbours == 4) & (grid == 2)
-    recovery = (sick_neighbours == 0) & (grid == 2)
-    # Set all cells to 0 (dead)
+def transition_function(grid, neighbourstates, neighbourcounts):
+    """Function to apply the transition rules
+    and return the new grid"""
+    # unpack state counts for all unique states
+    Chaparral_neighbours, Lake_neighbours, Dense_Forest_neighbours, Scrubland_neighbours, Burning_c_neighbours, Burning_df_neighbours, Burning_s_neighbours, Burnt_down_neighbours = neighbourcounts
+    burning_neighbours = Burning_c_neighbours + Burning_df_neighbours + Burning_s_neighbours
+    # identifies what the tile is 
+    is_chaparral = (grid == 0)
+    is_dense_forest = (grid == 2)
+    is_scrubland = (grid == 3)
+    is_burning = (grid == 4) | (grid == 5) | (grid == 6)
+    
+    # states tansitioning from burning to burnt down is still incomplete
+    burnt_out = False
+    
+    # starts_c_burning = is_chaparral and some function that used the number of neigbours burning to determine the likelyhood the tile goes on fire
+    # starts_df_burning = is_dense_forest and some function that used the number of neigbours burning to determine the likelyhood the tile goes on fire
+    # starts_s_burning = is_scrubland and some function that used the number of neigbours burning to determine the likelyhood the tile goes on fire
     grid[:, :] = 0
-    grid[death_isolation | death_sickness] = 0
-    grid[become_sick | remain_sick] = 2
-    # Set cells to 1 where either cell is born or survives
-    grid[birth | survive | recovery] = 1
+    grid[starts_c_burning] = 4
+    grid[starts_df_burning] = 5
+    grid[starts_s_burning] = 6
+    grid[burnt_out] = 7
     return grid
 
 
 def setup(args):
+    """Set up the config object used to interact with the GUI"""
     config_path = args[0]
     config = utils.load(config_path)
-    # ---THE CA MUST BE RELOADED IN THE GUI IF ANY OF THE BELOW ARE CHANGED---
-    config.title = "Conway's game of life"
-    config.dimensions = 2
-    config.states = (0, 1, 2)
-    # ------------------------------------------------------------------------
+    # -- THE CA MUST BE RELOADED IN THE GUI IF ANY OF THE BELOW ARE CHANGED --
+    config.title = "Group Project: Forest Fire"
+    config.dimensions = 2 
+    Chaparral = 0
+    Lake = 1 
+    Dense_Forest = 2
+    Scrubland = 3
+    Burning_c = 4 # burning chaparral
+    Burning_df = 5 # burning dense forest
+    Burning_s = 6 # burning scubland
+    Burnt_down = 7
+    config.states = (Chaparral, Lake, Dense_Forest, Scrubland, Burning_c, Burning_df, Burning_s, Burnt_down)
+    # -------------------------------------------------------------------------
 
     # ---- Override the defaults below (these may be changed at anytime) ----
 
-    config.state_colors = [(0,0,0),(1,1,1),(0,1,0)]
-    config.num_generations = 150
-    config.grid_dims = (400,400) 
+    config.state_colors = [(0.58,0.58,0),(0,0,1),(0,0.24,0),(1,1,0),(0.55,0.18,0),(0.63,0,0),(0.92,0.4,0),(0,0,0)]
+    config.grid_dims = (400,400)
 
     # ----------------------------------------------------------------------
 
+    # the GUI calls this to pass the user defined config
+    # into the main system with an extra argument
+    # do not change
     if len(args) == 2:
         config.save()
         sys.exit()
-
     return config
 
 
